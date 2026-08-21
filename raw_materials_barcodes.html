@@ -179,8 +179,18 @@
   function openWhatsappMessage() {
     if (!currentIssued) return;
     const amount = $('issuedAmount').value.trim() || currentIssued.quantity;
-    const message = `ניפוק חומר גלם לייצור%0Aחומר: ${currentIssued.material}%0Aכמות שנופקה: ${amount}%0Aתפוגה: ${formatDate(currentIssued.expiry)}%0Aספק: ${currentIssued.supplier}%0Aתעודה / חשבונית: ${currentIssued.delivery}%0Aתאריך קבלה: ${formatDate(currentIssued.receiptDate)}%0Aאצווה: ${currentIssued.batch}%0Aשעת ניפוק: ${nowText()}`;
-    window.open(`https://api.whatsapp.com/send?text=${message}`, '_blank', 'noopener');
+    const message = [
+      'ניפוק חומר גלם לייצור',
+      `חומר: ${currentIssued.material || 'לא צוין'}`,
+      `כמות שנופקה: ${amount}`,
+      `תאריך תפוגה: ${formatDate(currentIssued.expiry)}`,
+      `ספק: ${currentIssued.supplier || 'לא צוין'}`,
+      `תעודת משלוח / חשבונית ספק: ${currentIssued.delivery || 'לא צוין'}`,
+      `תאריך קבלה: ${formatDate(currentIssued.receiptDate)}`,
+      `מספר אצווה: ${currentIssued.batch || 'לא צוין'}`,
+      `שעת ניפוק: ${nowText()}`
+    ].join('\n');
+    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`, '_blank', 'noopener');
   }
   $('scanInput').addEventListener('change', () => {
     const item = parseBarcode($('scanInput').value.trim());
