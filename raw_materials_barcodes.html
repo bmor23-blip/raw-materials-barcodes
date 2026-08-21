@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>עקיבות חומרי גלם | ברקודים</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+  <style>
+    :root { --ink:#18242b; --muted:#68757a; --paper:#f5f7f3; --line:#dce4df; --teal:#087f79; --teal-dark:#07534f; --lime:#d9ee72; --coral:#ef765f; --white:#fff; --shadow:0 18px 48px rgba(22,49,49,.09); }
+    * { box-sizing:border-box; }
+    body { margin:0; color:var(--ink); background:var(--paper); font-family:Heebo, sans-serif; }
+    body:before { content:""; position:fixed; inset:0 0 auto; height:7px; background:linear-gradient(90deg,var(--teal-dark),var(--teal),var(--lime)); z-index:3; }
+    .shell { width:min(1180px, calc(100% - 36px)); margin:0 auto; padding:50px 0 60px; }
+    header { display:flex; align-items:flex-end; justify-content:space-between; gap:24px; margin-bottom:32px; }
+    .kicker { color:var(--teal); font-size:.85rem; font-weight:800; letter-spacing:.08em; }
+    h1 { font-size:clamp(2rem,4vw,3.65rem); line-height:1; margin:8px 0 12px; letter-spacing:-.04em; }
+    .subtitle { margin:0; color:var(--muted); font-size:1.05rem; }
+    .date-chip { border:1px solid var(--line); background:var(--white); padding:11px 16px; border-radius:5px; font-size:.9rem; white-space:nowrap; }
+    .tabs { display:flex; gap:8px; border-bottom:1px solid var(--line); margin-bottom:25px; }
+    .tab { border:0; background:transparent; color:var(--muted); font:600 1rem Heebo; padding:13px 18px; cursor:pointer; border-bottom:3px solid transparent; }
+    .tab.active { color:var(--teal-dark); border-color:var(--teal); }
+    .view { display:none; animation:rise .35s ease both; }
+    .view.active { display:block; }
+    @keyframes rise { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+    .grid { display:grid; grid-template-columns:minmax(0,1.15fr) minmax(310px,.85fr); gap:24px; align-items:start; }
+    .panel { background:var(--white); border:1px solid var(--line); border-radius:8px; box-shadow:var(--shadow); padding:27px; }
+    .panel-heading { display:flex; justify-content:space-between; align-items:flex-start; gap:15px; margin-bottom:22px; }
+    h2 { margin:0; font-size:1.35rem; }
+    .eyebrow { color:var(--teal); font-weight:800; font-size:.78rem; text-transform:uppercase; letter-spacing:.08em; }
+    .fields { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+    .field { display:flex; flex-direction:column; gap:6px; }
+    .field.full { grid-column:1/-1; }
+    label { font-weight:600; font-size:.9rem; }
+    input, select { width:100%; border:1px solid #cbd7d2; border-radius:4px; background:#fbfcfa; color:var(--ink); font:inherit; padding:11px 12px; outline:0; transition:border .2s, box-shadow .2s; }
+    input:focus, select:focus { border-color:var(--teal); box-shadow:0 0 0 3px rgba(8,127,121,.12); }
+    .hint { color:var(--muted); font-size:.78rem; }
+    .actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:24px; }
+    button { border:0; border-radius:4px; padding:11px 17px; font:700 .95rem Heebo; cursor:pointer; transition:transform .15s, filter .15s; }
+    button:hover { transform:translateY(-1px); filter:brightness(.97); }
+    .primary { background:var(--teal); color:white; }
+    .secondary { background:#e9f1ed; color:var(--teal-dark); }
+    .quiet { background:transparent; color:var(--muted); border:1px solid var(--line); }
+    .preview-wrap { background:#edf2ed; border-radius:5px; padding:22px; display:flex; justify-content:center; min-height:370px; align-items:center; }
+    .label { width:min(100%,355px); background:white; color:#131b1d; border:1px solid #b9c5bd; padding:18px; box-shadow:0 8px 16px rgba(0,0,0,.08); }
+    .label-top { display:flex; justify-content:space-between; align-items:start; border-bottom:2px solid var(--ink); padding-bottom:10px; margin-bottom:12px; }
+    .label-brand { font-weight:800; font-size:1.1rem; }
+    .label-id { font:700 .68rem 'Space Mono',monospace; color:var(--muted); }
+    .label h3 { margin:0 0 12px; font-size:1.4rem; }
+    .label-data { display:grid; grid-template-columns:1fr 1fr; gap:8px 12px; margin-bottom:14px; }
+    .label-data small { display:block; color:#66706e; font-size:.67rem; }
+    .label-data strong { display:block; font-size:.85rem; overflow-wrap:anywhere; }
+    #barcode { display:none; width:100%; height:auto; max-height:100px; }
+    #qrCode { display:none; width:190px; height:190px; margin:10px auto 0; }
+    #qrCode img, #qrCode canvas { display:block; width:190px !important; height:190px !important; }
+    .barcode-empty { text-align:center; color:var(--muted); padding:30px 10px; border:1px dashed #becbc2; font-size:.85rem; }
+    .label-code { text-align:center; font:700 .64rem 'Space Mono',monospace; margin-top:7px; overflow-wrap:anywhere; }
+    .scan-grid { display:grid; grid-template-columns:minmax(0,1fr) 340px; gap:24px; }
+    .scan-input { font:1rem 'Space Mono',monospace; direction:ltr; text-align:left; padding:15px; }
+    .camera-box { display:none; margin-top:16px; border:1px solid var(--line); border-radius:5px; overflow:hidden; background:#101b1c; }
+    .camera-box.active { display:block; }
+    #cameraReader { min-height:230px; }
+    .camera-help { color:#d8e7df; font-size:.8rem; padding:9px 12px; text-align:center; }
+    .status { min-height:26px; margin-top:12px; font-size:.9rem; color:var(--muted); }
+    .status.ok { color:#087f55; } .status.error { color:#c04c39; }
+    .issued-card { background:#f4f8f0; border-right:4px solid var(--teal); padding:18px; margin-top:20px; display:none; }
+    .issued-card.visible { display:block; }
+    .issued-card h3 { margin:0 0 12px; }
+    .issued-details { display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:.9rem; }
+    .issued-details span { display:block; color:var(--muted); font-size:.75rem; }
+    .log-head { display:flex; justify-content:space-between; align-items:center; gap:10px; margin:28px 0 13px; }
+    .log-head h3 { margin:0; font-size:1.15rem; }
+    .log-table { width:100%; border-collapse:collapse; font-size:.86rem; }
+    .log-table th, .log-table td { text-align:right; border-bottom:1px solid var(--line); padding:10px 7px; vertical-align:top; }
+    .log-table th { color:var(--muted); font-weight:600; }
+    .empty { color:var(--muted); text-align:center; padding:25px !important; }
+    .settings { margin-top:22px; border-top:1px solid var(--line); padding-top:18px; }
+    .settings summary { cursor:pointer; font-weight:700; color:var(--teal-dark); }
+    .settings-content { margin-top:15px; display:grid; grid-template-columns:1fr auto; gap:10px; align-items:end; }
+    .inventory-summary { display:grid; grid-template-columns:repeat(3, 1fr); gap:12px; margin-bottom:22px; }
+    .metric { border:1px solid var(--line); border-radius:5px; padding:15px; background:#f7faf6; }
+    .metric small { display:block; color:var(--muted); font-size:.78rem; }
+    .metric strong { display:block; color:var(--teal-dark); font-size:1.5rem; margin-top:3px; }
+    .lot-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(250px, 1fr)); gap:14px; }
+    .lot-card { border:1px solid var(--line); border-radius:5px; padding:15px; background:#fbfcfa; }
+    .lot-card h3 { margin:0 0 7px; font-size:1.05rem; }
+    .lot-card p { margin:4px 0; color:var(--muted); font-size:.86rem; }
+    .lot-card strong { color:var(--ink); }
+    .lot-qr { min-height:132px; display:flex; justify-content:center; align-items:center; margin:10px 0; }
+    .lot-qr img, .lot-qr canvas { width:128px !important; height:128px !important; }
+    .small-note { font-size:.77rem; color:var(--muted); margin:10px 0 0; }
+    @media (max-width:800px) { .shell { width:min(100% - 24px, 600px); padding-top:34px; } header { display:block; } .date-chip { display:inline-block; margin-top:18px; } .grid, .scan-grid { grid-template-columns:1fr; } .panel { padding:19px; } }
+    @media (max-width:520px) { .fields { grid-template-columns:1fr; } .field.full { grid-column:auto; } .tabs { overflow:auto; } .tab { white-space:nowrap; padding-inline:12px; } .preview-wrap { padding:12px; } .settings-content { grid-template-columns:1fr; } .inventory-summary { grid-template-columns:1fr; } }
+    @media print { body { background:white; } body:before, header, .tabs, .form-panel, .scan-panel, .actions, .panel-heading, .subtitle, .date-chip { display:none !important; } .shell, .grid, .panel, .preview-wrap { display:block; width:auto; margin:0; padding:0; border:0; box-shadow:none; background:white; } .preview-wrap { min-height:0; } .label { width:90mm; margin:0 auto; box-shadow:none; border:1px solid #111; } .preview-panel { display:block !important; } }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header>
+      <div><div class="kicker">RAW MATERIALS / TRACEABILITY</div><h1>עקיבות חומרי גלם</h1><p class="subtitle">קליטת משלוח, סימון ברקוד וניפוק לייצור במקום אחד.</p></div>
+      <div class="date-chip" id="todayDisplay"></div>
+    </header>
+
+    <nav class="tabs" aria-label="ניווט"><button class="tab active" data-tab="receiving">קליטה והדפסה</button><button class="tab" data-tab="issuance">ניפוק וסריקה</button><button class="tab" data-tab="inventory">מלאי במחסן</button></nav>
+
+    <section id="receiving" class="view active">
+      <div class="grid">
+        <div class="panel form-panel">
+          <div class="panel-heading"><div><div class="eyebrow">01 / Receiving</div><h2>פרטי קבלת חומר גלם</h2></div></div>
+          <form id="receivingForm">
+            <div class="fields">
+              <div class="field"><label for="supplier">שם ספק</label><input id="supplier" required placeholder="לדוגמה: ספקי מזון בע״מ"></div>
+              <div class="field"><label for="delivery">תעודת משלוח / חשבונית</label><input id="delivery" required placeholder="לדוגמה: INV-2048"></div>
+              <div class="field"><label for="material">שם חומר גלם</label><input id="material" list="materials" required placeholder="בחר או הקלד חומר"><datalist id="materials"><option value="קמח חיטה"><option value="סוכר"><option value="שמן קנולה"><option value="מלח"><option value="חומר אריזה"></datalist></div>
+              <div class="field"><label for="receiptDate">תאריך קבלה</label><input id="receiptDate" type="date" required></div>
+              <div class="field"><label for="expiry">תאריך תפוגה</label><input id="expiry" type="date" required></div>
+              <div class="field"><label for="batch">מספר אצווה של הספק <span class="hint">(אופציונלי)</span></label><input id="batch" placeholder="Batch number"></div>
+              <div class="field"><label for="quantityValue">כמות שהתקבלה</label><input id="quantityValue" type="number" min="0.001" step="0.001" required placeholder="לדוגמה: 500"></div>
+              <div class="field"><label for="quantityUnit">יחידת מידה</label><select id="quantityUnit" required><option value="ק״ג">ק״ג</option><option value="גרם">גרם</option><option value="ליטר">ליטר</option><option value="יחידות">יחידות</option><option value="שקים">שקים</option><option value="מארזים">מארזים</option></select></div>
+            </div>
+            <div class="actions"><button class="primary" type="submit">יצירת ברקוד ותצוגה מקדימה</button><button class="quiet" type="reset">ניקוי טופס</button></div>
+          </form>
+        </div>
+        <div class="panel preview-panel">
+          <div class="panel-heading"><div><div class="eyebrow">02 / Label preview</div><h2>תצוגת תווית</h2></div><span class="hint">מוכן להדפסה</span></div>
+          <div class="preview-wrap"><div class="label" id="label"><div class="label-top"><div class="label-brand">חומר גלם</div><div class="label-id" id="labelId">RM ———</div></div><h3 id="previewMaterial">מלא את פרטי הקבלה</h3><div class="label-data"><div><small>ספק</small><strong id="previewSupplier">—</strong></div><div><small>תפוגה</small><strong id="previewExpiry">—</strong></div><div><small>תעודה</small><strong id="previewDelivery">—</strong></div><div><small>כמות</small><strong id="previewQuantity">—</strong></div><div><small>אצווה</small><strong id="previewBatch">—</strong></div><div><small>קבלה</small><strong id="previewReceipt">—</strong></div></div><div id="barcodeArea" class="barcode-empty">קוד ה־QR יופיע כאן לאחר יצירת התווית</div><div id="qrCode" aria-label="קוד QR"></div><svg id="barcode" aria-label="ברקוד"></svg><div class="label-code" id="previewCode"></div></div></div>
+          <div class="actions"><button class="primary" id="printButton" type="button" disabled>הדפסת תווית</button></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="inventory" class="view">
+      <div class="panel"><div class="panel-heading"><div><div class="eyebrow">05 / Warehouse stock</div><h2>מלאי נוכחי במחסן</h2></div><button class="quiet" id="refreshInventoryButton" type="button">רענון מלאי</button></div>
+        <div class="inventory-summary"><div class="metric"><small>חומרים במלאי</small><strong id="inventoryMaterials">0</strong></div><div class="metric"><small>אצוות פעילות</small><strong id="inventoryLots">0</strong></div><div class="metric"><small>כמות כוללת</small><strong id="inventoryUnits">0</strong></div></div>
+        <div style="overflow:auto"><table class="log-table"><thead><tr><th>חומר</th><th>מלאי כולל</th><th>מספר אצוות</th><th>פירוט אצוות</th></tr></thead><tbody id="inventoryBody"><tr><td class="empty" colspan="4">אין עדיין חומרי גלם במלאי</td></tr></tbody></table></div>
+      </div>
+    </section>
+
+    <section id="issuance" class="view">
+      <div class="scan-grid"><div class="panel scan-panel"><div class="panel-heading"><div><div class="eyebrow">03 / Production issuance</div><h2>סריקת ברקוד לניפוק</h2></div></div><label for="scanInput">סרוק או הזן את הברקוד</label><input class="scan-input" id="scanInput" autocomplete="off" placeholder="סרוק כאן..."><div class="actions"><button class="secondary" id="cameraButton" type="button">פתיחת מצלמת הטלפון</button><button class="quiet" id="stopCameraButton" type="button" hidden>עצירת מצלמה</button></div><div class="camera-box" id="cameraBox"><div id="cameraReader"></div><div class="camera-help">כוון את המצלמה אל הברקוד שעל המסך</div></div><div id="scanStatus" class="status">לא בוצעה סריקה עדיין.</div><div class="issued-card" id="issuedCard"><h3 id="issuedTitle"></h3><div class="issued-details"><div><span>ספק</span><strong id="issuedSupplier"></strong></div><div><span>תעודה / חשבונית</span><strong id="issuedDelivery"></strong></div><div><span>תאריך קבלה</span><strong id="issuedReceipt"></strong></div><div><span>אצווה</span><strong id="issuedBatch"></strong></div><div><span>יתרה באצווה</span><strong id="issuedQuantity"></strong></div><div><span>תפוגה</span><strong id="issuedExpiry"></strong></div><div><span>שעת ניפוק</span><strong id="issuedTime"></strong></div></div><div class="fields" style="margin-top:16px"><div class="field"><label for="issuedAmount">כמות שנופקה בפועל</label><input id="issuedAmount" type="number" min="0.001" step="0.001" placeholder="לדוגמה: 300"></div><div class="field"><label for="issuedUnit">יחידת מידה</label><input id="issuedUnit" readonly></div></div><div class="actions"><button class="primary" id="whatsappButton" type="button">פתיחת הודעת WhatsApp</button><button class="secondary" id="saveButton" type="button">שמירת ניפוק ועדכון מלאי</button></div></div></div>
+        <div class="panel"><div class="panel-heading"><div><div class="eyebrow">04 / Log</div><h2>יומן ניפוקים</h2></div></div><p class="hint">הנתונים נשמרים מקומית בדפדפן הזה.</p><div class="actions"><button class="secondary" id="exportButton" type="button">ייצוא CSV</button><button class="quiet" id="clearButton" type="button">מחיקת יומן</button></div><details class="settings"><summary>חיבור ל-Google Sheets</summary><div class="settings-content"><div class="field"><label for="webhook">כתובת Web App Webhook</label><input id="webhook" type="url" placeholder="https://script.google.com/macros/s/.../exec"></div><button class="secondary" id="webhookButton" type="button">שמירה</button></div><p class="small-note">לאחר שמירת ניפוק, הרשומה תישלח גם לכתובת שהוגדרה.</p></details></div></div>
+      <div class="panel" style="margin-top:24px"><div class="panel-heading"><div><div class="eyebrow">04 / Manual issuance</div><h2>ניפוק ידני לפי אצווה</h2></div></div><p class="hint">בחר אצווה מהרשימה. ה־QR מוצג ליד כל אצווה לצורך סריקה או זיהוי.</p><div class="lot-grid" id="manualLots"><p class="empty">אין אצוות פעילות במלאי</p></div></div>
+      <div class="panel" style="margin-top:24px"><div class="log-head"><h3>רשומות אחרונות</h3><span class="hint" id="logCount">0 רשומות</span></div><div style="overflow:auto"><table class="log-table"><thead><tr><th>חומר</th><th>כמות</th><th>תפוגה</th><th>ספק</th><th>מועד</th></tr></thead><tbody id="logBody"><tr><td class="empty" colspan="5">אין עדיין רשומות ניפוק</td></tr></tbody></table></div></div>
+    </section>
+  </main>
+<script>
+  const $ = (id) => document.getElementById(id);
+  const STORAGE_KEY = 'rawMaterialsIssuanceLog';
+  const INVENTORY_KEY = 'rawMaterialsInventory';
+  const firebaseConfig = { apiKey:'AIzaSyA0r5ZPLf1QXwonKBzx7M4vU5EWjDZ0-Uw', authDomain:'raw-materials-inventory.firebaseapp.com', databaseURL:'https://raw-materials-inventory-default-rtdb.firebaseio.com', projectId:'raw-materials-inventory', storageBucket:'raw-materials-inventory.firebasestorage.app', messagingSenderId:'2667834990', appId:'1:2667834990:web:aeddfdc1cb79bbfc1f407f' };
+  const firebaseApp = firebase.initializeApp(firebaseConfig);
+  const realtimeDatabase = firebase.database(firebaseApp);
+  const inventoryReference = realtimeDatabase.ref('inventoryLots');
+  const issuanceReference = realtimeDatabase.ref('issuanceLog');
+  let cloudReady = false;
+  let cloudInventoryInitialized = false;
+  let cloudLogInitialized = false;
+  let currentItem = null;
+  let currentIssued = null;
+  let cameraScanner = null;
+  const formatDate = (value) => { if (!value) return '—'; const date = new Date(`${value}T00:00:00`); return Number.isNaN(date.getTime()) ? '—' : new Intl.DateTimeFormat('he-IL').format(date); };
+  const nowText = () => new Intl.DateTimeFormat('he-IL', { dateStyle:'short', timeStyle:'short' }).format(new Date());
+  const escapeCsv = (value) => `"${String(value ?? '').replaceAll('"', '""')}"`;
+  const readLog = () => JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+  const readInventory = () => JSON.parse(localStorage.getItem(INVENTORY_KEY) || '[]');
+  const saveInventory = async (inventory) => {
+    localStorage.setItem(INVENTORY_KEY, JSON.stringify(inventory));
+    if (cloudReady) await syncInventoryToCloud(inventory);
+  };
+  const saveIssuanceLog = (record) => {
+    const records = readLog(); records.unshift(record); localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+    if (cloudReady) issuanceReference.push(record).catch(() => setStatus('הניפוק נשמר מקומית, אך הסנכרון לענן נכשל.', 'error'));
+  };
+  async function syncInventoryToCloud(inventory) {
+    try { const cloudInventory = Object.fromEntries(inventory.map((lot) => [lot.id, lot])); await inventoryReference.update(cloudInventory); return true; } catch { setStatus('המלאי נשמר מקומית, אך הסנכרון לענן נכשל.', 'error'); return false; }
+  }
+  function setupCloudSync() {
+    cloudReady = true;
+    inventoryReference.on('value', (snapshot) => {
+      const cloudInventory = Object.values(snapshot.val() || {});
+      if (!cloudInventory.length && !cloudInventoryInitialized) { cloudInventoryInitialized = true; const localInventory = readInventory(); if (localInventory.length) syncInventoryToCloud(localInventory); return; }
+      cloudInventoryInitialized = true; localStorage.setItem(INVENTORY_KEY, JSON.stringify(cloudInventory)); renderInventory();
+    }, () => setStatus('המערכת עובדת מקומית. לא ניתן להתחבר למלאי ב־Realtime Database.', 'error'));
+    issuanceReference.on('value', (snapshot) => {
+      const cloudLog = Object.values(snapshot.val() || {}).sort((first, second) => String(second.issuedAt).localeCompare(String(first.issuedAt)));
+      if (!cloudLog.length && !cloudLogInitialized) { cloudLogInitialized = true; const localLog = readLog(); localLog.forEach((record) => issuanceReference.push(record)); return; }
+      cloudLogInitialized = true; localStorage.setItem(STORAGE_KEY, JSON.stringify(cloudLog)); renderLog();
+    }, () => setStatus('יומן הניפוקים נשמר מקומית. לא ניתן להתחבר ל־Realtime Database.', 'error'));
+  }
+  const formatQuantity = (value, unit) => `${Number(value).toLocaleString('he-IL', { maximumFractionDigits:3 })} ${unit || ''}`.trim();
+  const getQuantityData = (item) => {
+    if (Number.isFinite(Number(item.quantityValue)) && item.unit) return { value:Number(item.quantityValue), unit:item.unit };
+    const match = String(item.quantity || '').match(/([\d.,]+)\s*(.*)/);
+    return { value:match ? Number(match[1].replace(',', '.')) : 0, unit:match?.[2]?.trim() || 'יחידות' };
+  };
+  const setStatus = (text, type='') => { $('scanStatus').textContent = text; $('scanStatus').className = `status ${type}`; };
+  const encodeBarcode = (value) => btoa(String.fromCharCode(...new TextEncoder().encode(value)));
+  const decodeBarcode = (value) => new TextDecoder().decode(Uint8Array.from(atob(value), (character) => character.charCodeAt(0)));
+
+  $('todayDisplay').textContent = new Intl.DateTimeFormat('he-IL', { dateStyle:'full' }).format(new Date());
+  $('receiptDate').value = new Date().toISOString().slice(0, 10);
+
+  document.querySelectorAll('.tab').forEach((tab) => tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab, .view').forEach((element) => element.classList.remove('active'));
+    tab.classList.add('active'); $(tab.dataset.tab).classList.add('active');
+  }));
+
+  $('receivingForm').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const id = `RM-${Date.now().toString(36).toUpperCase()}`;
+    currentItem = { id, supplier:$('supplier').value.trim(), delivery:$('delivery').value.trim(), material:$('material').value.trim(), receiptDate:$('receiptDate').value, expiry:$('expiry').value, batch:$('batch').value.trim() || 'לא צוין', quantityValue:Number($('quantityValue').value), unit:$('quantityUnit').value, quantity:formatQuantity($('quantityValue').value, $('quantityUnit').value) };
+    const inventory = readInventory();
+    inventory.push({ ...currentItem, receivedQuantity:currentItem.quantityValue, remainingQuantity:currentItem.quantityValue });
+    await saveInventory(inventory);
+    renderInventory();
+    const payload = encodeBarcode(JSON.stringify(currentItem));
+    $('previewMaterial').textContent = currentItem.material; $('previewSupplier').textContent = currentItem.supplier; $('previewExpiry').textContent = formatDate(currentItem.expiry); $('previewDelivery').textContent = currentItem.delivery; $('previewQuantity').textContent = currentItem.quantity; $('previewBatch').textContent = currentItem.batch; $('previewReceipt').textContent = formatDate(currentItem.receiptDate); $('labelId').textContent = currentItem.id; $('previewCode').textContent = currentItem.id;
+    $('barcodeArea').style.display = 'none'; $('barcode').style.display = 'none'; $('qrCode').style.display = 'block'; $('qrCode').innerHTML = '';
+    new QRCode($('qrCode'), { text:payload, width:190, height:190, correctLevel:QRCode.CorrectLevel.L });
+    $('printButton').disabled = false;
+  });
+  $('receivingForm').addEventListener('reset', () => { setTimeout(() => { $('receiptDate').value = new Date().toISOString().slice(0, 10); $('barcode').style.display = 'none'; $('qrCode').style.display = 'none'; $('qrCode').innerHTML = ''; $('barcodeArea').style.display = 'block'; $('printButton').disabled = true; currentItem = null; }, 0); });
+  $('printButton').addEventListener('click', () => window.print());
+
+  function parseBarcode(value) {
+    try {
+      if (value.startsWith('RM1|')) {
+        const fields = value.split('|');
+        if (fields.length === 9) return { id:fields[1], supplier:fields[2], delivery:fields[3], material:fields[4], receiptDate:fields[5], expiry:fields[6], batch:fields[7], quantity:fields[8] };
+      }
+      const item = JSON.parse(value);
+      if (item.id && item.material) return item;
+      if (Array.isArray(item) && item.length === 8) return { id:item[0], supplier:item[1], delivery:item[2], material:item[3], receiptDate:item[4], expiry:item[5], batch:item[6], quantity:item[7] };
+      throw new Error('Invalid JSON payload');
+    } catch {
+      try { const item = JSON.parse(decodeBarcode(value)); return item.id && item.material ? item : null; } catch { return null; }
+    }
+  }
+  function openWhatsappMessage() {
+    if (!currentIssued) return;
+    const quantityData = getQuantityData(currentIssued);
+    const amount = Number($('issuedAmount').value);
+    if (!Number.isFinite(amount) || amount <= 0 || amount > currentIssued.remainingQuantity) { setStatus(`יש להזין כמות בין 0 ל־${formatQuantity(currentIssued.remainingQuantity, quantityData.unit)}.`, 'error'); return; }
+    const message = [
+      'ניפוק חומר גלם לייצור',
+      `חומר: ${currentIssued.material || 'לא צוין'}`,
+      `כמות שנופקה: ${formatQuantity(amount, quantityData.unit)}`,
+      `תאריך תפוגה: ${formatDate(currentIssued.expiry)}`,
+      `ספק: ${currentIssued.supplier || 'לא צוין'}`,
+      `תעודת משלוח / חשבונית ספק: ${currentIssued.delivery || 'לא צוין'}`,
+      `תאריך קבלה: ${formatDate(currentIssued.receiptDate)}`,
+      `מספר אצווה: ${currentIssued.batch || 'לא צוין'}`,
+      `שעת ניפוק: ${nowText()}`
+    ].join('\n');
+    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`, '_blank', 'noopener');
+  }
+  async function selectLotForIssuance(item) {
+    let inventoryLot = readInventory().find((lot) => lot.id === item.id);
+    if (cloudReady) {
+      setStatus('מעדכן יתרה מהשרת...');
+      try {
+        const snapshot = await inventoryReference.child(item.id).once('value');
+        if (snapshot.exists()) {
+          inventoryLot = snapshot.val();
+          const inventory = readInventory(); const localIndex = inventory.findIndex((lot) => lot.id === item.id);
+          if (localIndex >= 0) inventory[localIndex] = inventoryLot; else inventory.push(inventoryLot);
+          localStorage.setItem(INVENTORY_KEY, JSON.stringify(inventory)); renderInventory();
+        }
+      } catch { setStatus('לא ניתן לקרוא את יתרת האצווה מהשרת.', 'error'); return; }
+    }
+    if (!inventoryLot || inventoryLot.remainingQuantity <= 0) { setStatus('לא נמצאה יתרה זמינה באצווה הזו.', 'error'); return; }
+    const quantityData = { value:inventoryLot.remainingQuantity, unit:inventoryLot.unit };
+    currentIssued = { ...item, ...inventoryLot, remainingQuantity:quantityData.value, quantityValue:quantityData.value, unit:quantityData.unit };
+    $('issuedTitle').textContent = item.material; $('issuedSupplier').textContent = item.supplier; $('issuedDelivery').textContent = item.delivery; $('issuedReceipt').textContent = formatDate(item.receiptDate); $('issuedBatch').textContent = item.batch; $('issuedQuantity').textContent = formatQuantity(quantityData.value, quantityData.unit); $('issuedExpiry').textContent = formatDate(item.expiry); $('issuedTime').textContent = nowText(); $('issuedUnit').value = quantityData.unit; $('issuedAmount').value = ''; $('issuedAmount').max = quantityData.value; $('issuedCard').classList.add('visible'); setStatus('האצווה נבחרה. הזן כמות לניפוק.', 'ok');
+    document.getElementById('issuedCard').scrollIntoView({ behavior:'smooth', block:'nearest' });
+  }
+  $('scanInput').addEventListener('change', async () => {
+    const item = parseBarcode($('scanInput').value.trim());
+    if (!item) { currentIssued = null; $('issuedCard').classList.remove('visible'); setStatus('לא ניתן לזהות את הברקוד. ודא שנסרקה תווית שנוצרה במערכת.', 'error'); return; }
+    await selectLotForIssuance(item);
+  });
+  $('cameraButton').addEventListener('click', async () => {
+    if (!window.Html5Qrcode) { setStatus('רכיב המצלמה לא נטען. יש לוודא חיבור לאינטרנט.', 'error'); return; }
+    $('cameraBox').classList.add('active'); $('cameraButton').hidden = true; $('stopCameraButton').hidden = false; setStatus('מפעיל מצלמה...');
+    cameraScanner = new Html5Qrcode('cameraReader');
+    try {
+      await cameraScanner.start({ facingMode:'environment' }, { fps:10, qrbox:{ width:240, height:240 }, formatsToSupport:[Html5QrcodeSupportedFormats.QR_CODE, Html5QrcodeSupportedFormats.CODE_128] }, (decodedText) => {
+        $('scanInput').value = decodedText; $('scanInput').dispatchEvent(new Event('change')); stopCamera();
+      }, () => {});
+    } catch { setStatus('לא ניתן להפעיל את המצלמה. יש לאשר הרשאת מצלמה ולפתוח את הקובץ דרך HTTPS.', 'error'); stopCamera(); }
+  });
+  async function stopCamera() {
+    if (cameraScanner) { try { await cameraScanner.stop(); } catch {} cameraScanner.clear(); cameraScanner = null; }
+    $('cameraBox').classList.remove('active'); $('cameraButton').hidden = false; $('stopCameraButton').hidden = true;
+  }
+  $('stopCameraButton').addEventListener('click', stopCamera);
+  $('whatsappButton').addEventListener('click', openWhatsappMessage);
+  $('saveButton').addEventListener('click', async () => {
+    if (!currentIssued) return;
+    const amount = Number($('issuedAmount').value); const inventory = readInventory(); const lot = inventory.find((entry) => entry.id === currentIssued.id); const quantityData = getQuantityData(currentIssued);
+    if (!lot) { setStatus('האצווה נסרקה, אך לא נמצאה במלאי המקומי. יש ליצור תווית חדשה לאחר העדכון.', 'error'); return; }
+    if (!Number.isFinite(amount) || amount <= 0 || amount > lot.remainingQuantity) { setStatus(`הכמות חייבת להיות בין 0 ל־${formatQuantity(lot.remainingQuantity, lot.unit)}.`, 'error'); return; }
+    const updatedRemaining = Number((lot.remainingQuantity - amount).toFixed(3));
+    const cloudSaved = cloudReady ? await inventoryReference.child(lot.id).transaction((cloudLot) => {
+      if (!cloudLot || Number(cloudLot.remainingQuantity) < amount) return;
+      cloudLot.remainingQuantity = Number((Number(cloudLot.remainingQuantity) - amount).toFixed(3));
+      return cloudLot;
+    }).then((result) => result.committed).catch(() => false) : true;
+    if (!cloudSaved) { setStatus('הניפוק לא נשמר בשרת. המלאי נשאר ללא שינוי.', 'error'); return; }
+    lot.remainingQuantity = updatedRemaining; localStorage.setItem(INVENTORY_KEY, JSON.stringify(inventory)); currentIssued.remainingQuantity = lot.remainingQuantity; $('issuedQuantity').textContent = formatQuantity(lot.remainingQuantity, lot.unit); $('issuedAmount').value = ''; renderInventory();
+    const record = { material:currentIssued.material, quantity:formatQuantity(amount, quantityData.unit), expiry:formatDate(currentIssued.expiry), supplier:currentIssued.supplier, delivery:currentIssued.delivery, receiptDate:formatDate(currentIssued.receiptDate), batch:currentIssued.batch, issuedAt:nowText(), barcodeId:currentIssued.id };
+    saveIssuanceLog(record); renderLog();
+    const webhook = $('webhook').value.trim();
+    if (webhook) { try { await fetch(webhook, { method:'POST', mode:'no-cors', headers:{'Content-Type':'text/plain'}, body:JSON.stringify(record) }); setStatus('הניפוק נשמר ונשלח ל-Google Sheets.', 'ok'); } catch { setStatus('הניפוק נשמר מקומית, אך השליחה ל-Google Sheets נכשלה.', 'error'); } } else setStatus('הניפוק נשמר ביומן המקומי.', 'ok');
+  });
+  $('webhookButton').addEventListener('click', () => { localStorage.setItem('rawMaterialsWebhook', $('webhook').value.trim()); setStatus('כתובת ה-Webhook נשמרה.', 'ok'); });
+  $('webhook').value = localStorage.getItem('rawMaterialsWebhook') || '';
+  $('exportButton').addEventListener('click', () => { const records = readLog(); if (!records.length) { setStatus('אין רשומות לייצוא.', 'error'); return; } const headers = ['חומר','כמות','תפוגה','ספק','תעודת משלוח / חשבונית','תאריך קבלה','אצווה','מועד ניפוק','מזהה ברקוד']; const keys = ['material','quantity','expiry','supplier','delivery','receiptDate','batch','issuedAt','barcodeId']; const csv = '\uFEFF' + [headers, ...records.map((record) => keys.map((key) => record[key]))].map((row) => row.map(escapeCsv).join(',')).join('\r\n'); const link = document.createElement('a'); link.href = URL.createObjectURL(new Blob([csv], {type:'text/csv;charset=utf-8'})); link.download = `raw-materials-issuance-${new Date().toISOString().slice(0,10)}.csv`; link.click(); URL.revokeObjectURL(link.href); });
+  $('clearButton').addEventListener('click', () => { if (confirm('למחוק את כל רשומות הניפוק מהמכשיר?')) { localStorage.removeItem(STORAGE_KEY); renderLog(); setStatus('היומן נמחק.', 'ok'); } });
+  function renderInventory() {
+    const lots = readInventory().filter((lot) => lot.remainingQuantity > 0); const groups = new Map();
+    lots.forEach((lot) => { const key = `${lot.material}||${lot.unit}`; if (!groups.has(key)) groups.set(key, { material:lot.material, unit:lot.unit, total:0, lots:[] }); const group = groups.get(key); group.total += lot.remainingQuantity; group.lots.push(lot); });
+    $('inventoryMaterials').textContent = groups.size; $('inventoryLots').textContent = lots.length; $('inventoryUnits').textContent = lots.reduce((sum, lot) => sum + lot.remainingQuantity, 0).toLocaleString('he-IL', { maximumFractionDigits:3 });
+    $('inventoryBody').innerHTML = groups.size ? [...groups.values()].map((group) => `<tr><td><strong>${group.material}</strong></td><td>${formatQuantity(group.total, group.unit)}</td><td>${group.lots.length}</td><td>${group.lots.map((lot) => `${lot.batch} — ${formatQuantity(lot.remainingQuantity, lot.unit)} (תפוגה ${formatDate(lot.expiry)})`).join('<br>')}</td></tr>`).join('') : '<tr><td class="empty" colspan="4">אין עדיין חומרי גלם במלאי</td></tr>';
+    renderManualLots();
+  }
+  function renderManualLots() {
+    const lots = readInventory().filter((lot) => lot.remainingQuantity > 0);
+    $('manualLots').innerHTML = lots.length ? lots.map((lot, index) => `<article class="lot-card"><h3>${lot.material}</h3><p><strong>אצווה:</strong> ${lot.batch}</p><p><strong>יתרה:</strong> ${formatQuantity(lot.remainingQuantity, lot.unit)}</p><p><strong>ספק:</strong> ${lot.supplier}</p><p><strong>תפוגה:</strong> ${formatDate(lot.expiry)}</p><div class="lot-qr" id="manualQr${index}"></div><button class="primary manual-select" type="button" data-lot-id="${lot.id}">בחירת אצווה לניפוק</button></article>`).join('') : '<p class="empty">אין אצוות פעילות במלאי</p>';
+    lots.forEach((lot, index) => new QRCode($(`manualQr${index}`), { text:encodeBarcode(JSON.stringify(lot)), width:128, height:128, correctLevel:QRCode.CorrectLevel.L }));
+  }
+  $('manualLots').addEventListener('click', (event) => { const button = event.target.closest('.manual-select'); if (!button) return; const lot = readInventory().find((entry) => entry.id === button.dataset.lotId); if (lot) selectLotForIssuance(lot); });
+  $('refreshInventoryButton').addEventListener('click', renderInventory);
+  function renderLog() { const records = readLog(); $('logCount').textContent = `${records.length} רשומות`; $('logBody').innerHTML = records.length ? records.slice(0, 20).map((record) => `<tr><td>${record.material}</td><td>${record.quantity}</td><td>${record.expiry}</td><td>${record.supplier}</td><td>${record.issuedAt}</td></tr>`).join('') : '<tr><td class="empty" colspan="5">אין עדיין רשומות ניפוק</td></tr>'; }
+  renderLog(); renderInventory(); setupCloudSync();
+</script>
+</body>
+</html>
